@@ -1,7 +1,5 @@
 #pragma once
 #include <cstddef>
-#include <functional>
-#include <utility>
 #include <vector>
 
 #include "chernykh_s_trapezoidal_integration/common/include/common.hpp"
