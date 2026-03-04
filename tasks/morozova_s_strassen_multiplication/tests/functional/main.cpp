@@ -33,7 +33,7 @@ class MorozovaSStrassenMultiplicationFuncTests : public ppc::util::BaseRunFuncTe
     return ValidateMultiplicationResult(output_data);
   }
 
-  bool CheckValidationExpectedResult() override {
+  bool CheckValidationExpectedResult() {
     if (test_number_ == 6 || test_number_ == 7) {
       return false;
     }
