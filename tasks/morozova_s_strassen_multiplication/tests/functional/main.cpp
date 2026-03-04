@@ -184,7 +184,7 @@ class MorozovaSStrassenMultiplicationFuncTests : public ppc::util::BaseRunFuncTe
     return b;
   }
 
-  static [[nodiscard]] Matrix ComputeExpectedResult(const Matrix &a, const Matrix &b) {
+  static Matrix ComputeExpectedResult(const Matrix &a, const Matrix &b) {
     int n = a.size;
     Matrix expected(n);
     for (int i = 0; i < n; ++i) {
@@ -199,7 +199,7 @@ class MorozovaSStrassenMultiplicationFuncTests : public ppc::util::BaseRunFuncTe
     return expected;
   }
 
-  static [[nodiscard]] bool CompareMatrices(const OutType &output_data, const Matrix &expected, int n) {
+  static bool CompareMatrices(const OutType &output_data, const Matrix &expected, int n) {
     const double eps = 1e-6;
     for (int i = 0; i < n; ++i) {
       for (int j = 0; j < n; ++j) {
