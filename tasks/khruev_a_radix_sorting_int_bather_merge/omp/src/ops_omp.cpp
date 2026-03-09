@@ -1,10 +1,11 @@
 #include "khruev_a_radix_sorting_int_bather_merge/omp/include/ops_omp.hpp"
 
+#include <omp.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <omp.h> 
 #include <vector>
 
 #include "khruev_a_radix_sorting_int_bather_merge/common/include/common.hpp"
@@ -54,12 +55,12 @@ void KhruevARadixSortingIntBatherMergeOMP::RadixSort(std::vector<int> &arr) {
 void KhruevARadixSortingIntBatherMergeOMP::OddEvenMerge(std::vector<int> &a, size_t n) {
   for (size_t po = n / 2; po > 0; po >>= 1) {
     if (po == n / 2) {
-      #pragma omp parallel for shared(a, po) default(none)
+#pragma omp parallel for shared(a, po) default(none)
       for (size_t i = 0; i < po; ++i) {
         CompareExchange(a, i, i + po);
       }
     } else {
-      #pragma omp parallel for shared(a, n, po) default(none)
+#pragma omp parallel for shared(a, n, po) default(none)
       for (size_t i = po; i < n - po; i += 2 * po) {
         for (size_t j = 0; j < po; ++j) {
           CompareExchange(a, i + j, i + j + po);
@@ -101,19 +102,19 @@ bool KhruevARadixSortingIntBatherMergeOMP::RunImpl() {
 
   size_t half = pow2 / 2;
   auto half_dist = static_cast<std::ptrdiff_t>(half);
-  
+
   std::vector<int> left(data.begin(), data.begin() + half_dist);
   std::vector<int> right(data.begin() + half_dist, data.end());
 
-  #pragma omp parallel sections
+#pragma omp parallel sections
   {
-    #pragma omp section
+#pragma omp section
     {
       RadixSort(left);
       std::ranges::copy(left, data.begin());
     }
-    
-    #pragma omp section
+
+#pragma omp section
     {
       RadixSort(right);
       std::ranges::copy(right, data.begin() + half_dist);
