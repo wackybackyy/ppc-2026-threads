@@ -14,47 +14,41 @@ namespace redkina_a_integral_simpson_seq {
 
 namespace {
 
-constexpr size_t kMaxDim = 10;  // максимальная размерность (достаточно для тестов)
+void EvaluatePoint(const std::vector<double> &a, const std::vector<double> &h, const std::vector<int> &n,
+                   const std::vector<int> &indices, const std::function<double(const std::vector<double> &)> &func,
+                   std::vector<double> &point, double &sum) {
+  size_t dim = a.size();
+  double w_prod = 1.0;
+  for (size_t dim_idx = 0; dim_idx < dim; ++dim_idx) {
+    int idx = indices[dim_idx];
+    point[dim_idx] = a[dim_idx] + (static_cast<double>(idx) * h[dim_idx]);
 
-inline int SimpsonCoeff(int idx, int n) {
-  if (idx == 0 || idx == n) {
-    return 1;
+    int w = 0;
+    if (idx == 0 || idx == n[dim_idx]) {
+      w = 1;
+    } else if (idx % 2 == 1) {
+      w = 4;
+    } else {
+      w = 2;
+    }
+    w_prod *= static_cast<double>(w);
   }
-  return (idx % 2 == 1) ? 4 : 2;
+  sum += w_prod * func(point);
 }
 
-bool AdvanceIndicesFromLevel(std::array<int, kMaxDim> &indices, const std::vector<int> &n, int start_level,
-                             size_t dim) {
-  int d = static_cast<int>(dim) - 1;
-  while (d >= start_level && indices[static_cast<size_t>(d)] == n[static_cast<size_t>(d)]) {
-    indices[static_cast<size_t>(d)] = 0;
+bool AdvanceIndices(std::vector<int> &indices, const std::vector<int> &n) {
+  int dim = static_cast<int>(indices.size());
+  int d = dim - 1;
+  while (d >= 0 && indices[d] == n[d]) {
+    indices[d] = 0;
     --d;
   }
-  if (d < start_level) {
+  if (d < 0) {
     return false;
   }
-  ++indices[static_cast<size_t>(d)];
+  ++indices[d];
   return true;
 }
-
-// Глобальный менеджер для однократной инициализации и корректного завершения OpenMP
-struct OMPResourceManager {
-  OMPResourceManager() {
-#ifdef _OPENMP
-    // Принудительная инициализация OpenMP при запуске программы
-    omp_get_max_threads();
-#endif
-  }
-
-  ~OMPResourceManager() {
-#ifdef _OPENMP
-// Если доступен OpenMP 5.0, пытаемся корректно завершить работу
-#  if defined(_OPENMP) && _OPENMP >= 201811
-    omp_pause_resource_all(omp_pause_hard);
-#  endif
-#endif
-  }
-} omp_global_manager;
 
 }  // namespace
 
@@ -69,9 +63,6 @@ bool RedkinaAIntegralSimpsonOMP::ValidationImpl() {
 
   if (dim == 0 || in.b.size() != dim || in.n.size() != dim) {
     return false;
-  }
-  if (dim > kMaxDim) {
-    return false;  // превышение допустимой размерности
   }
 
   for (size_t i = 0; i < dim; ++i) {
@@ -109,54 +100,23 @@ bool RedkinaAIntegralSimpsonOMP::RunImpl() {
     h_prod *= h[i];
   }
 
+  std::vector<double> point(dim);
+  double sum = 0.0;
+
+  std::vector<int> indices(dim, 0);
+
+  bool has_next = true;
+  while (has_next) {
+    EvaluatePoint(a_, h, n_, indices, func_, point, sum);
+    has_next = AdvanceIndices(indices, n_);
+  }
+
   double denominator = 1.0;
   for (size_t i = 0; i < dim; ++i) {
     denominator *= 3.0;
   }
 
-  const std::vector<double> &a_ref = a_;
-  const std::vector<double> &h_ref = h;
-  const std::vector<int> &n_ref = n_;
-  const auto &func_ref = func_;
-  const size_t dim_local = dim;
-
-  double total_sum = 0.0;
-
-#pragma omp parallel default(none) shared(a_ref, h_ref, n_ref, func_ref, dim_local, total_sum)
-  {
-    // Каждый поток создаёт свой вектор для точки, будет автоматически уничтожен при выходе из параллельной области
-    std::vector<double> point(dim_local);
-
-#pragma omp for reduction(+ : total_sum)
-    for (int i0 = 0; i0 <= static_cast<int>(n_ref[0]); ++i0) {
-      double coeff0 = SimpsonCoeff(i0, static_cast<int>(n_ref[0]));
-      double local_sum = 0.0;
-
-      std::array<int, kMaxDim> indices{};
-      indices[0] = i0;
-      for (size_t d = 1; d < dim_local; ++d) {
-        indices[d] = 0;
-      }
-
-      do {
-        point[0] = a_ref[0] + static_cast<double>(i0) * h_ref[0];
-
-        double w_prod = 1.0;
-        for (size_t d = 1; d < dim_local; ++d) {
-          int idx = indices[d];
-          point[d] = a_ref[d] + static_cast<double>(idx) * h_ref[d];
-          int w = SimpsonCoeff(idx, static_cast<int>(n_ref[d]));
-          w_prod *= static_cast<double>(w);
-        }
-
-        local_sum += coeff0 * w_prod * func_ref(point);
-      } while (AdvanceIndicesFromLevel(indices, n_ref, 1, dim_local));
-
-      total_sum += local_sum;
-    }
-  }
-
-  result_ = (h_prod / denominator) * total_sum;
+  result_ = (h_prod / denominator) * sum;
   return true;
 }
 
