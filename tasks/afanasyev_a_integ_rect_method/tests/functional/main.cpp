@@ -8,6 +8,7 @@
 
 #include "afanasyev_a_integ_rect_method/common/include/common.hpp"
 #include "afanasyev_a_integ_rect_method/seq/include/ops_seq.hpp"
+#include "afanasyev_a_integ_rect_method/omp/include/ops_omp.hpp"
 #include "util/include/func_test_util.hpp"
 #include "util/include/util.hpp"
 
@@ -59,8 +60,9 @@ TEST_P(AfanasyevARunFuncTests, MidpointApproximation) {
 const std::array<TestType, 3> kTestParam = {std::make_tuple(10, "n10"), std::make_tuple(30, "n30"),
                                             std::make_tuple(80, "n80")};
 
-const auto kTestTasksList = std::tuple_cat(ppc::util::AddFuncTask<AfanasyevAIntegRectMethodSEQ, InType>(
-    kTestParam, PPC_SETTINGS_afanasyev_a_integ_rect_method));
+const auto kTestTasksList = 
+std::tuple_cat(ppc::util::AddFuncTask<AfanasyevAIntegRectMethodSEQ, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_integ_rect_method),
+               ppc::util::AddFuncTask<AfanasyevAIntegRectMethodOMP, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_integ_rect_method));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
