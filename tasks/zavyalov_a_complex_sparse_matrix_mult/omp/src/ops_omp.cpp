@@ -2,6 +2,10 @@
 
 #include <omp.h>
 
+#include <cstddef>
+#include <map>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include "util/include/util.hpp"
@@ -9,8 +13,8 @@
 
 namespace zavyalov_a_compl_sparse_matr_mult {
 
-SparseMatrix ZavyalovAComplSparseMatrMultOMP::multiplicate_with_omp(const SparseMatrix &matr_a,
-                                                                    const SparseMatrix &matr_b) {
+SparseMatrix ZavyalovAComplSparseMatrMultOMP::MultiplicateWithOmp(const SparseMatrix &matr_a,
+                                                                   const SparseMatrix &matr_b) {
   if (matr_a.width != matr_b.height) {
     throw std::invalid_argument("Incompatible matrix dimensions for multiplication");
   }
@@ -19,7 +23,7 @@ SparseMatrix ZavyalovAComplSparseMatrMultOMP::multiplicate_with_omp(const Sparse
 
   std::vector<std::map<std::pair<size_t, size_t>, Complex>> local_maps(num_threads);
 
-#pragma omp parallel for num_threads(num_threads) schedule(static)
+#pragma omp parallel for num_threads(num_threads) schedule(static) default(none) shared(matr_a, matr_b, local_maps)
   for (size_t i = 0; i < matr_a.Count(); ++i) {
     int tid = omp_get_thread_num();
     size_t row_a = matr_a.row_ind[i];
@@ -71,7 +75,7 @@ bool ZavyalovAComplSparseMatrMultOMP::RunImpl() {
   const auto &matr_a = std::get<0>(GetInput());
   const auto &matr_b = std::get<1>(GetInput());
 
-  GetOutput() = multiplicate_with_omp(matr_a, matr_b);
+  GetOutput() = MultiplicateWithOmp(matr_a, matr_b);
 
   return true;
 }
