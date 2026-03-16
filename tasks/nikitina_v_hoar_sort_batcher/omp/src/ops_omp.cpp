@@ -3,6 +3,7 @@
 #include <omp.h>
 
 #include <algorithm>
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -12,31 +13,73 @@ namespace nikitina_v_hoar_sort_batcher {
 
 namespace {
 
-void CompareSplit(std::vector<int> &arr, int start1, int len1, int start2, int len2) {
-  std::vector<int> temp(len1 + len2);
-  int idx_i = start1;
-  int idx_j = start2;
-  int idx_k = 0;
+void QuickSortHoare(std::vector<int> &arr, int low, int high) {
+  if (low >= high) {
+    return;
+  }
+  std::vector<std::pair<int, int>> stack;
+  stack.emplace_back(low, high);
 
-  while (idx_i < start1 + len1 && idx_j < start2 + len2) {
-    if (arr[idx_i] <= arr[idx_j]) {
-      temp[idx_k++] = arr[idx_i++];
-    } else {
-      temp[idx_k++] = arr[idx_j++];
+  while (!stack.empty()) {
+    auto [l, h] = stack.back();
+    stack.pop_back();
+
+    if (l >= h) {
+      continue;
     }
+
+    int pivot = arr[l + ((h - l) / 2)];
+    int i = l - 1;
+    int j = h + 1;
+
+    while (true) {
+      i++;
+      while (arr[i] < pivot) {
+        i++;
+      }
+
+      j--;
+      while (arr[j] > pivot) {
+        j--;
+      }
+
+      if (i >= j) {
+        break;
+      }
+      std::swap(arr[i], arr[j]);
+    }
+
+    stack.emplace_back(l, j);
+    stack.emplace_back(j + 1, h);
   }
-  while (idx_i < start1 + len1) {
-    temp[idx_k++] = arr[idx_i++];
-  }
-  while (idx_j < start2 + len2) {
-    temp[idx_k++] = arr[idx_j++];
+}
+
+void CompareSplit(std::vector<int> &arr, int start1, int len1, int start2, int len2) {
+  if (len1 == 0 || len2 == 0) {
+    return;
   }
 
-  for (int idx = 0; idx < len1; ++idx) {
-    arr[start1 + idx] = temp[idx];
-  }
-  for (int idx = 0; idx < len2; ++idx) {
-    arr[start2 + idx] = temp[len1 + idx];
+  std::vector<int> left_block(arr.begin() + start1, arr.begin() + start1 + len1);
+  std::vector<int> right_block(arr.begin() + start2, arr.begin() + start2 + len2);
+
+  int p1 = 0;
+  int p2 = 0;
+  int write1 = start1;
+  int write2 = start2;
+
+  for (int i = 0; i < len1 + len2; ++i) {
+    int val;
+    if (p1 < len1 && (p2 == len2 || left_block[p1] <= right_block[p2])) {
+      val = left_block[p1++];
+    } else {
+      val = right_block[p2++];
+    }
+
+    if (i < len1) {
+      arr[write1++] = val;
+    } else {
+      arr[write2++] = val;
+    }
   }
 }
 
@@ -71,50 +114,61 @@ void BatcherMergePhase(std::vector<int> &output, const std::vector<int> &offsets
 
 }  // namespace
 
-HoareSortBatcherOMP::HoareSortBatcherOMP(InType in) : input_(std::move(in)) {}
+HoareSortBatcherOMP::HoareSortBatcherOMP(const InType &in) {
+  SetTypeOfTask(GetStaticTypeOfTask());
+  GetInput() = in;
+}
 
 bool HoareSortBatcherOMP::ValidationImpl() {
   return true;
 }
 
 bool HoareSortBatcherOMP::PreProcessingImpl() {
-  output_ = input_;
+  GetOutput() = GetInput();
   return true;
 }
 
 bool HoareSortBatcherOMP::RunImpl() {
-  int n = static_cast<int>(output_.size());
-  if (n <= 1) {
+  auto &output_ = GetOutput();
+
+  int orig_n = static_cast<int>(output_.size());
+  if (orig_n <= 1) {
     return true;
   }
 
   int max_threads = omp_get_max_threads();
   int t = 1;
-  while (t * 2 <= max_threads && t * 2 <= n) {
+  while (t * 2 <= max_threads && t * 2 <= orig_n) {
     t *= 2;
   }
 
   if (t == 1) {
-    std::ranges::sort(output_);
+    QuickSortHoare(output_, 0, orig_n - 1);
     return true;
   }
 
+  int pad = (t - (orig_n % t)) % t;
+  for (int i = 0; i < pad; ++i) {
+    output_.push_back(std::numeric_limits<int>::max());
+  }
+
+  int n = orig_n + pad;
   std::vector<int> offsets(t + 1, 0);
-  int base_chunk = n / t;
-  int rem = n % t;
-  for (int i = 0; i < t; ++i) {
-    offsets[i + 1] = offsets[i] + base_chunk + (i < rem ? 1 : 0);
+  int chunk = n / t;
+  for (int i = 0; i <= t; ++i) {
+    offsets[i] = i * chunk;
   }
 
   std::vector<int> &local_output = output_;
 
-#pragma omp parallel num_threads(t) default(none) shared(local_output, offsets)
-  {
-    int tid = omp_get_thread_num();
-    std::sort(local_output.begin() + offsets[tid], local_output.begin() + offsets[tid + 1]);
+#pragma omp parallel for num_threads(t) default(none) shared(local_output, offsets, t)
+  for (int i = 0; i < t; ++i) {
+    QuickSortHoare(local_output, offsets[i], offsets[i + 1] - 1);
   }
 
   BatcherMergePhase(output_, offsets, t);
+
+  output_.resize(orig_n);
 
   return true;
 }
