@@ -53,8 +53,11 @@ bool BoltenkovSGaussianKernelOMP::RunImpl() {
     std::copy(data[i - 1].begin(), data[i - 1].end(), tmp_data[i].begin() + 1);
   }
 
+  auto kernel = kernel_;
+  int shift = shift_;
+
 #pragma omp parallel for num_threads(ppc::util::GetNumThreads()) default(none) shared(tmp_data, res) \
-    firstprivate(n, m, kernel_, shift_)
+    firstprivate(n, m, kernel, shift)
   for (std::size_t i = 1; i <= n; i++) {
     for (std::size_t j = 1; j <= m; j++) {
       res[i - 1][j - 1] = (tmp_data[i - 1][j - 1] * kernel_[0][0]) + (tmp_data[i - 1][j] * kernel_[0][1]) +
