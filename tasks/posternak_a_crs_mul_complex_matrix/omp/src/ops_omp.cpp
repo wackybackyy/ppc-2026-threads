@@ -27,7 +27,9 @@ bool PosternakACRSMulComplexMatrixOMP::ValidationImpl() {
 }
 
 bool PosternakACRSMulComplexMatrixOMP::PreProcessingImpl() {
-  const auto &[a, b] = GetInput();
+  const auto &input = GetInput();
+  const auto &a = input.first;
+  const auto &b = input.second;
   auto &res = GetOutput();
 
   res.rows = a.rows;
@@ -36,7 +38,9 @@ bool PosternakACRSMulComplexMatrixOMP::PreProcessingImpl() {
 }
 
 bool PosternakACRSMulComplexMatrixOMP::RunImpl() {
-  const auto &[a, b] = GetInput();
+  const auto &input = GetInput();
+  const auto &a = input.first;
+  const auto &b = input.second;
   auto &res = GetOutput();
 
   if (a.values.empty() || b.values.empty()) {
