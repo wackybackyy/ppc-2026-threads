@@ -43,7 +43,14 @@ bool TabalaevAMatrixMulStrassenOMP::PreProcessingImpl() {
   padded_a_.assign(padded_n_ * padded_n_, 0.0);
   padded_b_.assign(padded_n_ * padded_n_, 0.0);
 
-#pragma omp parallel default(none) shared(in, padded_a_, padded_b_, a_rows_, a_cols_b_rows_, b_cols_, padded_n_)
+  auto &padded_a = padded_a_;
+  auto &padded_b = padded_b_;
+  size_t a_rows = a_rows_;
+  size_t a_cols_b_rows = a_cols_b_rows_;
+  size_t b_cols = b_cols_;
+  size_t padded_n = padded_n_;
+
+#pragma omp parallel default(none) shared(in, padded_a, padded_b, a_rows, a_cols_b_rows, b_cols, padded_n)
   {
 #pragma omp for nowait
     for (size_t i = 0; i < a_rows_; ++i) {
@@ -68,7 +75,12 @@ bool TabalaevAMatrixMulStrassenOMP::RunImpl() {
   auto &out = GetOutput();
   out.assign(a_rows_ * b_cols_, 0.0);
 
-#pragma omp parallel for default(none) shared(out, result_c_, a_rows_, b_cols_, padded_n_)
+  const auto &result_c = result_c_;
+  size_t a_rows = a_rows_;
+  size_t b_cols = b_cols_;
+  size_t padded_n = padded_n_;
+
+#pragma omp parallel for default(none) shared(out, result_c, a_rows, b_cols, padded_n)
   for (size_t i = 0; i < a_rows_; ++i) {
     for (size_t j = 0; j < b_cols_; ++j) {
       out[(i * b_cols_) + j] = result_c_[(i * padded_n_) + j];
