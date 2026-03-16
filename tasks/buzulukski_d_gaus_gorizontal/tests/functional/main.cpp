@@ -46,7 +46,6 @@ TEST_P(BuzulukskiDGausGorizontalFuncTests, ParallelRun) {
 
 namespace {
 const std::array<TestType, 2> kTestParamSeq = {std::make_tuple(3, "seq_size_3"), std::make_tuple(10, "seq_size_10")};
-
 const std::array<TestType, 2> kTestParamOmp = {std::make_tuple(3, "omp_size_3"), std::make_tuple(10, "omp_size_10")};
 
 INSTANTIATE_TEST_SUITE_P(
