@@ -28,7 +28,7 @@ class BuzulukskiDGausGorizontalOMP : public BaseTask {
   bool RunImpl() override;
   bool PostProcessingImpl() override;
 
-  void ApplyGaussianToPixel(int py, int px);
+  static void ApplyGaussianToPixel(int py, int px);
 
   int width_ = 0;
   int height_ = 0;

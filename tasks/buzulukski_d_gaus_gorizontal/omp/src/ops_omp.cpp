@@ -63,7 +63,7 @@ bool BuzulukskiDGausGorizontalOMP::PreProcessingImpl() {
   return true;
 }
 
-[[maybe_unused]] void BuzulukskiDGausGorizontalOMP::ApplyGaussianToPixel(int py, int px) {
+void BuzulukskiDGausGorizontalOMP::ApplyGaussianToPixel(int py, int px) {
   (void)py;
   (void)px;
 }
