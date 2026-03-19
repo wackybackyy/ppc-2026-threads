@@ -11,7 +11,7 @@ namespace kichanova_k_lin_system_by_conjug_grad {
 namespace {
 double ComputeDotProductOMP(const std::vector<double> &a, const std::vector<double> &b, int n) {
   double result = 0.0;
-#pragma omp parallel for reduction(+ : result) schedule(static)
+#pragma omp parallel for default(none) shared(a, b, n) reduction(+ : result) schedule(static)
   for (int i = 0; i < n; ++i) {
     result += a[i] * b[i];
   }
@@ -21,7 +21,7 @@ double ComputeDotProductOMP(const std::vector<double> &a, const std::vector<doub
 void ComputeMatrixVectorProductOMP(const std::vector<double> &a, const std::vector<double> &v,
                                    std::vector<double> &result, int n) {
   const auto stride = static_cast<size_t>(n);
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for default(none) shared(a, v, result, n, stride) schedule(static)
   for (int i = 0; i < n; ++i) {
     double sum = 0.0;
     const double *a_row = &a[static_cast<size_t>(i) * stride];
@@ -33,21 +33,21 @@ void ComputeMatrixVectorProductOMP(const std::vector<double> &a, const std::vect
 }
 
 void UpdateSolutionOMP(std::vector<double> &x, const std::vector<double> &p, double alpha, int n) {
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for default(none) shared(x, p, alpha, n) schedule(static)
   for (int i = 0; i < n; ++i) {
     x[i] += alpha * p[i];
   }
 }
 
 void UpdateResidualOMP(std::vector<double> &r, const std::vector<double> &ap, double alpha, int n) {
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for default(none) shared(r, ap, alpha, n) schedule(static)
   for (int i = 0; i < n; ++i) {
     r[i] -= alpha * ap[i];
   }
 }
 
 void UpdateSearchDirectionOMP(std::vector<double> &p, const std::vector<double> &r, double beta, int n) {
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for default(none) shared(p, r, beta, n) schedule(static)
   for (int i = 0; i < n; ++i) {
     p[i] = r[i] + (beta * p[i]);
   }
@@ -96,7 +96,7 @@ bool KichanovaKLinSystemByConjugGradOMP::RunImpl() {
   std::vector<double> p(n);
   std::vector<double> ap(n);
 
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for default(none) shared(r, b, p, n) schedule(static)
   for (int i = 0; i < n; i++) {
     r[i] = b[i];
     p[i] = r[i];

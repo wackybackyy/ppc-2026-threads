@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <tuple>
 
 #include "kichanova_k_lin_system_by_conjug_grad/common/include/common.hpp"
 #include "kichanova_k_lin_system_by_conjug_grad/omp/include/ops_omp.hpp"
