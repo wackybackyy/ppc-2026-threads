@@ -78,7 +78,7 @@ bool ChetverikovaEShellSortSimpleMergeOMP::RunImpl() {
 
     std::vector<int> temp(output.begin() + left, output.begin() + right);
     ShellSort(temp);
-    std::copy(temp.begin(), temp.end(), output.begin() + left);
+    std::ranges::copy(temp.begin(), temp.end(), output.begin() + left);
   }
 
   auto current_end = static_cast<std::ptrdiff_t>(ind_parts[1]);
