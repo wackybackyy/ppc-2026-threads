@@ -13,7 +13,7 @@
 
 namespace gonozov_l_bitwise_sorting_double_batcher_merge {
 
-GonozovLBitSortBatcherMergeOMP::GonozovLBitSortBatcherMergeSEQ(const InType &in) {
+GonozovLBitSortBatcherMergeOMP::GonozovLBitSortBatcherMergeOMP(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
 }
