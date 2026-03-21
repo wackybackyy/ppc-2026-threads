@@ -100,34 +100,21 @@ void UniteLabels(std::vector<int> &parent, int a, int b) {
   }
 }
 
-}  // namespace
+int NumThreadsForRows(int rows) {
+  const int capped = std::max(ppc::util::GetNumThreads(), 1);
+  return std::min(capped, rows);
+}
 
-bool GaivoronskiyMMarkingBinaryComponentsOMP::RunImpl() {
-  const auto &input = GetInput();
-  auto &output = GetOutput();
-  const int rows = input[0];
-  const int cols = input[1];
-  const int cells = rows * cols;
-
-  if (cells == 0) {
-    return true;
-  }
-
-  int num_threads = ppc::util::GetNumThreads();
-  if (num_threads < 1) {
-    num_threads = 1;
-  }
-  num_threads = std::min(num_threads, rows);
-
+std::vector<int> MakeRowStarts(int rows, int num_threads) {
   std::vector<int> row_starts(static_cast<std::size_t>(num_threads) + 1);
-  for (int t = 0; t <= num_threads; t++) {
-    row_starts[static_cast<std::size_t>(t)] = (t * rows) / num_threads;
+  for (int thread_idx = 0; thread_idx <= num_threads; thread_idx++) {
+    row_starts[static_cast<std::size_t>(thread_idx)] = (thread_idx * rows) / num_threads;
   }
+  return row_starts;
+}
 
-  std::vector<std::vector<int>> local_planes(static_cast<std::size_t>(num_threads),
-                                             std::vector<int>(static_cast<std::size_t>(cells), 0));
-  std::vector<int> labels_used(static_cast<std::size_t>(num_threads), 0);
-
+void ParallelLabelStrips(const InType &input, int rows, int cols, int num_threads, const std::vector<int> &row_starts,
+                         std::vector<std::vector<int>> &local_planes, std::vector<int> &labels_used) {
 #pragma omp parallel num_threads(num_threads) default(none) \
     shared(input, local_planes, labels_used, row_starts, rows, cols, num_threads)
   {
@@ -138,13 +125,13 @@ bool GaivoronskiyMMarkingBinaryComponentsOMP::RunImpl() {
 
     if (r_begin < r_end) {
       auto &plane = local_planes[static_cast<std::size_t>(tid)];
-      for (int r = r_begin; r < r_end; r++) {
-        for (int c = 0; c < cols; c++) {
-          const int flat = (r * cols) + c;
+      for (int row = r_begin; row < r_end; row++) {
+        for (int col = 0; col < cols; col++) {
+          const int flat = (row * cols) + col;
           const int idx = flat + 2;
           if (input[idx] == 0 && plane[static_cast<std::size_t>(flat)] == 0) {
             next_label++;
-            BfsLabelInStrip(input, plane, cols, r_begin, r_end, r, c, next_label);
+            BfsLabelInStrip(input, plane, cols, r_begin, r_end, row, col, next_label);
           }
         }
       }
@@ -152,31 +139,31 @@ bool GaivoronskiyMMarkingBinaryComponentsOMP::RunImpl() {
 
     labels_used[static_cast<std::size_t>(tid)] = next_label;
   }
+}
 
+std::pair<std::vector<int>, int> BuildLabelBases(const std::vector<int> &labels_used, int num_threads) {
   std::vector<int> base(static_cast<std::size_t>(num_threads), 0);
   int sum = 0;
-  for (int t = 0; t < num_threads; t++) {
-    base[static_cast<std::size_t>(t)] = sum;
-    sum += labels_used[static_cast<std::size_t>(t)];
+  for (int thread_idx = 0; thread_idx < num_threads; thread_idx++) {
+    base[static_cast<std::size_t>(thread_idx)] = sum;
+    sum += labels_used[static_cast<std::size_t>(thread_idx)];
   }
+  return {base, sum};
+}
 
-  const int max_global_before_merge = sum;
-
-  if (max_global_before_merge == 0) {
-    return true;
-  }
-
-  for (int t = 0; t < num_threads; t++) {
-    const int r_begin = row_starts[static_cast<std::size_t>(t)];
-    const int r_end = row_starts[static_cast<std::size_t>(t) + 1];
+void CopyStripsToGlobalOutput(OutType &output, int cols, int num_threads, const std::vector<int> &row_starts,
+                              const std::vector<int> &base, const std::vector<std::vector<int>> &local_planes) {
+  for (int thread_idx = 0; thread_idx < num_threads; thread_idx++) {
+    const int r_begin = row_starts[static_cast<std::size_t>(thread_idx)];
+    const int r_end = row_starts[static_cast<std::size_t>(thread_idx) + 1U];
     if (r_begin >= r_end) {
       continue;
     }
-    const auto &plane = local_planes[static_cast<std::size_t>(t)];
-    const int offset = base[static_cast<std::size_t>(t)];
-    for (int r = r_begin; r < r_end; r++) {
-      for (int c = 0; c < cols; c++) {
-        const int flat = (r * cols) + c;
+    const auto &plane = local_planes[static_cast<std::size_t>(thread_idx)];
+    const int offset = base[static_cast<std::size_t>(thread_idx)];
+    for (int row = r_begin; row < r_end; row++) {
+      for (int col = 0; col < cols; col++) {
+        const int flat = (row * cols) + col;
         const int loc = plane[static_cast<std::size_t>(flat)];
         if (loc > 0) {
           output[flat + 2] = offset + loc;
@@ -184,41 +171,46 @@ bool GaivoronskiyMMarkingBinaryComponentsOMP::RunImpl() {
       }
     }
   }
+}
 
-  std::vector<int> parent(static_cast<std::size_t>(max_global_before_merge) + 1);
-  for (int i = 1; i <= max_global_before_merge; i++) {
-    parent[static_cast<std::size_t>(i)] = i;
-  }
-
-  for (int t = 0; t + 1 < num_threads; t++) {
-    const int boundary_row = row_starts[static_cast<std::size_t>(t + 1)];
+void MergeBoundariesUnionFind(const InType &input, OutType &output, int rows, int cols, int num_threads,
+                              const std::vector<int> &row_starts, std::vector<int> &parent) {
+  for (int thread_idx = 0; thread_idx + 1 < num_threads; thread_idx++) {
+    const int next_strip = thread_idx + 1;
+    const int boundary_row = row_starts[static_cast<std::size_t>(next_strip)];
     if (boundary_row <= 0 || boundary_row >= rows) {
       continue;
     }
     const int ra = boundary_row - 1;
     const int rb = boundary_row;
-    for (int c = 0; c < cols; c++) {
-      const int ia = (ra * cols) + c + 2;
-      const int ib = (rb * cols) + c + 2;
-      if (input[ia] == 0 && input[ib] == 0) {
-        const int la = output[ia];
-        const int lb = output[ib];
-        if (la > 0 && lb > 0) {
-          UniteLabels(parent, la, lb);
-        }
+    for (int col = 0; col < cols; col++) {
+      const int ia = (ra * cols) + col + 2;
+      const int ib = (rb * cols) + col + 2;
+      if (input[ia] != 0 || input[ib] != 0) {
+        continue;
+      }
+      const int la = output[ia];
+      const int lb = output[ib];
+      if (la > 0 && lb > 0) {
+        UniteLabels(parent, la, lb);
       }
     }
   }
+}
 
-  for (int i = 1; i <= max_global_before_merge; i++) {
-    parent[static_cast<std::size_t>(i)] = FindRoot(parent, i);
+void FlattenParentForest(std::vector<int> &parent, int max_label) {
+  for (int label_idx = 1; label_idx <= max_label; label_idx++) {
+    parent[static_cast<std::size_t>(label_idx)] = FindRoot(parent, label_idx);
   }
+}
 
-  std::vector<int> remap(static_cast<std::size_t>(max_global_before_merge) + 1, 0);
+std::vector<int> BuildFinalRemap(const InType &input, const OutType &output, const std::vector<int> &parent, int rows,
+                                 int cols, int max_label) {
+  std::vector<int> remap(static_cast<std::size_t>(max_label) + 1, 0);
   int next_final = 1;
-  for (int r = 0; r < rows; r++) {
-    for (int c = 0; c < cols; c++) {
-      const int idx = (r * cols) + c + 2;
+  for (int row = 0; row < rows; row++) {
+    for (int col = 0; col < cols; col++) {
+      const int idx = (row * cols) + col + 2;
       if (input[idx] != 0) {
         continue;
       }
@@ -232,11 +224,15 @@ bool GaivoronskiyMMarkingBinaryComponentsOMP::RunImpl() {
       }
     }
   }
+  return remap;
+}
 
+void ApplyRemapInParallel(const InType &input, OutType &output, const std::vector<int> &parent,
+                          const std::vector<int> &remap, int rows, int cols) {
 #pragma omp parallel for default(none) shared(input, output, parent, remap, rows, cols) schedule(static)
-  for (int r = 0; r < rows; r++) {
-    for (int c = 0; c < cols; c++) {
-      const int idx = (r * cols) + c + 2;
+  for (int row = 0; row < rows; row++) {
+    for (int col = 0; col < cols; col++) {
+      const int idx = (row * cols) + col + 2;
       if (input[idx] != 0) {
         output[idx] = 0;
       } else {
@@ -246,6 +242,47 @@ bool GaivoronskiyMMarkingBinaryComponentsOMP::RunImpl() {
       }
     }
   }
+}
+
+}  // namespace
+
+bool GaivoronskiyMMarkingBinaryComponentsOMP::RunImpl() {
+  const auto &input = GetInput();
+  auto &output = GetOutput();
+  const int rows = input[0];
+  const int cols = input[1];
+  const int cells = rows * cols;
+
+  if (cells == 0) {
+    return true;
+  }
+
+  const int num_threads = NumThreadsForRows(rows);
+  const std::vector<int> row_starts = MakeRowStarts(rows, num_threads);
+
+  std::vector<std::vector<int>> local_planes(static_cast<std::size_t>(num_threads),
+                                             std::vector<int>(static_cast<std::size_t>(cells), 0));
+  std::vector<int> labels_used(static_cast<std::size_t>(num_threads), 0);
+
+  ParallelLabelStrips(input, rows, cols, num_threads, row_starts, local_planes, labels_used);
+
+  const auto [base, max_global_before_merge] = BuildLabelBases(labels_used, num_threads);
+  if (max_global_before_merge == 0) {
+    return true;
+  }
+
+  CopyStripsToGlobalOutput(output, cols, num_threads, row_starts, base, local_planes);
+
+  std::vector<int> parent(static_cast<std::size_t>(max_global_before_merge) + 1);
+  for (int label_idx = 1; label_idx <= max_global_before_merge; label_idx++) {
+    parent[static_cast<std::size_t>(label_idx)] = label_idx;
+  }
+
+  MergeBoundariesUnionFind(input, output, rows, cols, num_threads, row_starts, parent);
+  FlattenParentForest(parent, max_global_before_merge);
+
+  const std::vector<int> remap = BuildFinalRemap(input, output, parent, rows, cols, max_global_before_merge);
+  ApplyRemapInParallel(input, output, parent, remap, rows, cols);
 
   return true;
 }
