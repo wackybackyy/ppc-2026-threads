@@ -12,36 +12,36 @@
 
 namespace kopilov_d_vertical_gauss_filter {
 
-class KopilovDVerticalGaussFilterPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  static constexpr int kWidth = 8192;
-  static constexpr int kHeight = 8192;
-  InType input_data_{};
+class GaussianFilterPerformanceTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
+  static constexpr int IMAGE_WIDTH = 8192;
+  static constexpr int IMAGE_HEIGHT = 8192;
+  InType inputImage{};
 
   void SetUp() override {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<int> dist(0, 255);
 
-    input_data_.width = kWidth;
-    input_data_.height = kHeight;
+    inputImage.width = IMAGE_WIDTH;
+    inputImage.height = IMAGE_HEIGHT;
 
-    input_data_.data.resize(static_cast<size_t>(kWidth) * static_cast<size_t>(kHeight));
-    for (auto &val : input_data_.data) {
+    inputImage.data.resize(static_cast<size_t>(IMAGE_WIDTH) * static_cast<size_t>(IMAGE_HEIGHT));
+    for (auto &val : inputImage.data) {
       val = static_cast<std::uint8_t>(dist(gen));
     }
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return output_data.width == input_data_.width && output_data.height == input_data_.height &&
-           output_data.data.size() == input_data_.data.size();
+    return output_data.width == inputImage.width && output_data.height == inputImage.height &&
+           output_data.data.size() == inputImage.data.size();
   }
 
   InType GetTestInputData() final {
-    return input_data_;
+    return inputImage;
   }
 };
 
-TEST_P(KopilovDVerticalGaussFilterPerfTests, RunPerfModes) {
+TEST_P(GaussianFilterPerformanceTests, PerformanceTest) {
   ExecuteTest(GetParam());
 }
 
@@ -53,9 +53,9 @@ const auto kAllPerfTasks =
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
-const auto kPerfTestName = KopilovDVerticalGaussFilterPerfTests::CustomPerfTestName;
+const auto kPerfTestName = GaussianFilterPerformanceTests::CustomPerfTestName;
 
-INSTANTIATE_TEST_SUITE_P(RunModeTests, KopilovDVerticalGaussFilterPerfTests, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(RunModeTests, GaussianFilterPerformanceTests, kGtestValues, kPerfTestName);
 
 }  // namespace
 

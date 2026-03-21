@@ -106,7 +106,6 @@ INSTANTIATE_TEST_SUITE_P(PicMatrixTests, KopilovDVerticalGaussFilterFuncTests, k
 
 }  // namespace
 
-/*****SEQ*****/
 TEST(KopilovDVerticalGaussFilterInvalidInputTest, ZeroSizes) {
   Matrix input;
   input.width = 0;
@@ -161,7 +160,6 @@ TEST(KopilovDVerticalGaussFilterInvalidInputTest, NegativeHeight) {
   EXPECT_FALSE(task->Validation());
 }
 
-/*****OMP*****/
 TEST(KopilovDVerticalGaussFilterInvalidInputTestOMP, ZeroSizes) {
   Matrix input;
   input.width = 0;
