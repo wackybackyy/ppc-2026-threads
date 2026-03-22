@@ -1,6 +1,5 @@
 #include "../../omp/include/ops_omp.hpp"
 
-#include <algorithm>
 #include <complex>
 #include <utility>
 #include <vector>
@@ -50,8 +49,9 @@ bool ShvetsovaKMultMatrixComplexOMP::RunImpl() {
     std::vector<std::complex<double>> column_c(matrix_a.rows, {0.0, 0.0});
 #pragma omp for
     for (int i = 0; i < matrix_b.cols; i++) {
-      std::ranges::fill(column_c, std::complex<double>(0.0, 0.0));
-      ;
+      for (auto &val : column_c) {
+        val = {0.0, 0.0};
+      }
       for (int j = matrix_b.col_ptr[i]; j < matrix_b.col_ptr[i + 1]; j++) {
         int tmp_ind = matrix_b.row_ind[j];
         std::complex tmp_val = matrix_b.values[j];
