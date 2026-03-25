@@ -2,10 +2,23 @@
 
 #include <tbb/tbb.h>
 
+#include <cstddef>
 #include <utility>
 #include <vector>
 
 namespace timur_a_cannon {
+
+void MultiplyBlocks(const std::vector<std::vector<double>> &a, const std::vector<std::vector<double>> &b,
+                    std::vector<std::vector<double>> &c, int b_size) {
+  for (int row = 0; row < b_size; ++row) {
+    for (int k = 0; k < b_size; ++k) {
+      double temp = a[row][k];
+      for (int col = 0; col < b_size; ++col) {
+        c[row][col] += temp * b[k][col];
+      }
+    }
+  }
+}
 
 TimurACannonMatrixMultiplicationTBB::TimurACannonMatrixMultiplicationTBB(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
@@ -50,8 +63,8 @@ bool TimurACannonMatrixMultiplicationTBB::RunImpl() {
         int s = (i + j) % grid_sz;
         for (int row = 0; row < b_size; ++row) {
           for (int col = 0; col < b_size; ++col) {
-            bl_a[i][j][row][col] = matrix_a[i * b_size + row][s * b_size + col];
-            bl_b[i][j][row][col] = matrix_b[s * b_size + row][j * b_size + col];
+            bl_a[i][j][row][col] = matrix_a[(i * b_size) + row][(s * b_size) + col];
+            bl_b[i][j][row][col] = matrix_b[(s * b_size) + row][(j * b_size) + col];
           }
         }
       }
@@ -62,14 +75,7 @@ bool TimurACannonMatrixMultiplicationTBB::RunImpl() {
     tbb::parallel_for(tbb::blocked_range2d<int>(0, grid_sz, 0, grid_sz), [&](const tbb::blocked_range2d<int> &r) {
       for (int i = r.rows().begin(); i != r.rows().end(); ++i) {
         for (int j = r.cols().begin(); j != r.cols().end(); ++j) {
-          for (int row = 0; row < b_size; ++row) {
-            for (int k = 0; k < b_size; ++k) {
-              double temp = bl_a[i][j][row][k];
-              for (int col = 0; col < b_size; ++col) {
-                bl_c[i][j][row][col] += temp * bl_b[i][j][k][col];
-              }
-            }
-          }
+          MultiplyBlocks(bl_a[i][j], bl_b[i][j], bl_c[i][j], b_size);
         }
       }
     });
@@ -91,13 +97,14 @@ bool TimurACannonMatrixMultiplicationTBB::RunImpl() {
       });
     }
   }
+
   Matrix result(n, std::vector<double>(n));
   tbb::parallel_for(tbb::blocked_range2d<int>(0, grid_sz, 0, grid_sz), [&](const tbb::blocked_range2d<int> &r) {
     for (int i = r.rows().begin(); i != r.rows().end(); ++i) {
       for (int j = r.cols().begin(); j != r.cols().end(); ++j) {
         for (int row = 0; row < b_size; ++row) {
           for (int col = 0; col < b_size; ++col) {
-            result[i * b_size + row][j * b_size + col] = bl_c[i][j][row][col];
+            result[(i * b_size) + row][(j * b_size) + col] = bl_c[i][j][row][col];
           }
         }
       }
