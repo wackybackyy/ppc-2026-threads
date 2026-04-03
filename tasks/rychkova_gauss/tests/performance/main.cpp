@@ -43,8 +43,8 @@ TEST_P(RychkovaGaussPerf, R) {
 
 namespace {
 
-const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, RychkovaGaussSEQ, RychkovaGaussOMP, RychkovaGaussTBB>(PPC_SETTINGS_rychkova_gauss);
+const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, RychkovaGaussSEQ, RychkovaGaussOMP, RychkovaGaussTBB>(
+    PPC_SETTINGS_rychkova_gauss);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
