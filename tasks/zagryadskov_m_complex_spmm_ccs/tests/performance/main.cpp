@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "util/include/perf_test_util.hpp"
+#include "zagryadskov_m_complex_spmm_ccs/all/include/ops_all.hpp"
 #include "zagryadskov_m_complex_spmm_ccs/common/include/common.hpp"
 #include "zagryadskov_m_complex_spmm_ccs/omp/include/ops_omp.hpp"
 #include "zagryadskov_m_complex_spmm_ccs/seq/include/ops_seq.hpp"
@@ -22,7 +23,7 @@ class ZagryadskovMRunPerfTestThreads : public ppc::util::BaseRunPerfTests<InType
   OutType test_result_;
 
   void SetUp() override {
-    int dim = 20000;
+    int dim = 40000;
     int seed = 0;
     CCS &a = std::get<0>(input_data_);
     CCS &b = std::get<1>(input_data_);
@@ -120,8 +121,8 @@ namespace {
 
 const auto kAllPerfTasks =
     ppc::util::MakeAllPerfTasks<InType, ZagryadskovMComplexSpMMCCSSEQ, ZagryadskovMComplexSpMMCCSOMP,
-                                ZagryadskovMComplexSpMMCCSTBB, ZagryadskovMComplexSpMMCCSSTL>(
-        PPC_SETTINGS_zagryadskov_m_complex_spmm_ccs);
+                                ZagryadskovMComplexSpMMCCSTBB, ZagryadskovMComplexSpMMCCSSTL,
+                                ZagryadskovMComplexSpMMCCSALL>(PPC_SETTINGS_zagryadskov_m_complex_spmm_ccs);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
