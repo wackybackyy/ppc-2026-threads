@@ -2,13 +2,16 @@
 
 #include <tbb/tbb.h>
 
-#include <atomic>
-#include <numeric>
-#include <util/include/util.hpp>
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 #include <vector>
 
 #include "baldin_a_radix_sort/common/include/common.hpp"
 #include "oneapi/tbb/parallel_for.h"
+#include "util/include/util.hpp"
 
 namespace baldin_a_radix_sort {
 
