@@ -6,7 +6,6 @@
 #include <array>
 #include <cmath>
 #include <functional>
-#include <vector>
 
 #include "afanasyev_a_integ_rect_method/common/include/common.hpp"
 
@@ -45,13 +44,13 @@ bool AfanasyevAIntegRectMethodTBB::RunImpl() {
 
   const int k_dim = 3;
   const double h = 1.0 / static_cast<double>(n);
-  const long long total_points = static_cast<long long>(n) * n * n;
+  const int64_t total_points = static_cast<int64_t>(n) * n * n;
 
-  const double sum = tbb::parallel_reduce(tbb::blocked_range<long long>(0, total_points), 0.0,
-                                          [&](const tbb::blocked_range<long long> &range, double local_sum) {
+  const double sum = tbb::parallel_reduce(tbb::blocked_range<int64_t>(0, total_points), 0.0,
+                                          [&](const tbb::blocked_range<int64_t> &range, double local_sum) {
     std::array<double, 3> x{};
-    const long long plane = static_cast<long long>(n) * n;
-    for (long long index = range.begin(); index != range.end(); ++index) {
+    const int64_t plane = static_cast<int64_t>(n) * n;
+    for (int64_t index = range.begin(); index != range.end(); ++index) {
       const int i = static_cast<int>(index / plane);
       const int j = static_cast<int>((index / n) % n);
       const int k = static_cast<int>(index % n);
@@ -63,7 +62,7 @@ bool AfanasyevAIntegRectMethodTBB::RunImpl() {
       local_sum += ExampleIntegrand(x);
     }
     return local_sum;
-  }, std::plus<double>());
+  }, std::plus<>());
 
   const double volume = std::pow(h, k_dim);
   GetOutput() = sum * volume;
