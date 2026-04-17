@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "shkryleva_s_shell_sort_simple_merge/common/include/common.hpp"
 namespace shkryleva_s_shell_sort_simple_merge {
 
 ShkrylevaSShellMergeTBB::ShkrylevaSShellMergeTBB(const InType &in) {
