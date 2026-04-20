@@ -45,8 +45,8 @@ namespace {
 
 bool ComputeSlice(const std::function<double(const std::vector<double> &)> &funcx,
                   const std::vector<std::pair<double, double>> &brd, const std::vector<double> &sz,
-                  std::size_t outer_dim, int64_t inner_cells, int num_splits, int outer,
-                  std::vector<int> &idx, std::vector<double> &x_vec, double &local_sum) {
+                  std::size_t outer_dim, int64_t inner_cells, int num_splits, int outer, std::vector<int> &idx,
+                  std::vector<double> &x_vec, double &local_sum) {
   for (std::size_t i = 0; i < outer_dim; ++i) {
     idx[i] = 0;
   }
@@ -76,9 +76,9 @@ bool ComputeSlice(const std::function<double(const std::vector<double> &)> &func
 }
 
 void ThreadWorker(const std::function<double(const std::vector<double> &)> &funcx,
-                  const std::vector<std::pair<double, double>> &brd, const std::vector<double> &sz,
-                  std::size_t dim, std::size_t outer_dim, int64_t inner_cells, int num_splits,
-                  int start, int end, double &partial_sum, int &error_flag) {
+                  const std::vector<std::pair<double, double>> &brd, const std::vector<double> &sz, std::size_t dim,
+                  std::size_t outer_dim, int64_t inner_cells, int num_splits, int start, int end, double &partial_sum,
+                  int &error_flag) {
   std::vector<int> idx(dim, 0);
   std::vector<double> x_vec(dim);
   double thread_sum = 0.0;
