@@ -68,7 +68,7 @@ void ProcessColumn(int j, const SparseMatrix &a, const SparseMatrix &b, int tid,
     }
   }
 
-  std::sort(touched.begin(), touched.end());
+  std::ranges::sort(touched);
 
   for (int i : touched) {
     if (std::abs(acc[i]) > 1e-9) {
