@@ -53,7 +53,7 @@ bool KolotukhinAGaussinBlureSTL::RunImpl() {
   const static int kSum = 16;
 
   auto &output = GetOutput();
-  const size_t total_pixels = static_cast<size_t>(img_height) * static_cast<size_t>(img_width);
+  const std::size_t total_pixels = static_cast<std::size_t>(img_height) * static_cast<std::size_t>(img_width);
 
   if (total_pixels == 0) {
     return false;
@@ -65,13 +65,13 @@ bool KolotukhinAGaussinBlureSTL::RunImpl() {
 
   for (int tid = 0; tid < num_threads; tid++) {
     threads.emplace_back([&, tid]() {
-      size_t begin = 0;
-      size_t end = 0;
+      std::size_t begin = 0;
+      std::size_t end = 0;
       GetThreadRange(tid, total_pixels, num_threads, begin, end);
 
-      for (size_t idx = begin; idx < end; idx++) {
-        int row = static_cast<int>(idx / img_width);
-        int col = static_cast<int>(idx % img_width);
+      for (std::size_t idx = begin; idx < end; idx++) {
+        int row = static_cast<int>(idx / static_cast<std::size_t>(img_width));
+        int col = static_cast<int>(idx % static_cast<std::size_t>(img_width));
 
         int acc = 0;
         for (int dy = -1; dy <= 1; dy++) {
