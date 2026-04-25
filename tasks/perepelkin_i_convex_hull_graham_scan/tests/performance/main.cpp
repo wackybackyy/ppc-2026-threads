@@ -9,12 +9,12 @@
 #include <utility>
 #include <vector>
 
+#include "perepelkin_i_convex_hull_graham_scan/all/include/ops_all.hpp"
 #include "perepelkin_i_convex_hull_graham_scan/common/include/common.hpp"
 #include "perepelkin_i_convex_hull_graham_scan/omp/include/ops_omp.hpp"
 #include "perepelkin_i_convex_hull_graham_scan/seq/include/ops_seq.hpp"
 #include "perepelkin_i_convex_hull_graham_scan/stl/include/ops_stl.hpp"
 #include "perepelkin_i_convex_hull_graham_scan/tbb/include/ops_tbb.hpp"
-#include "perepelkin_i_convex_hull_graham_scan/all/include/ops_all.hpp"
 #include "task/include/task.hpp"
 #include "util/include/perf_test_util.hpp"
 

@@ -17,45 +17,45 @@ class PerepelkinIConvexHullGrahamScanALL : public BaseTask {
     return ppc::task::TypeOfTask::kALL;
   }
   explicit PerepelkinIConvexHullGrahamScanALL(const InType &in);
-  ~PerepelkinIConvexHullGrahamScanALL();
 
  private:
   int proc_rank_{};
   int proc_num_{};
-  MPI_Datatype MPI_POINT_;
+  MPI_Datatype MPI_POINT_{};
 
   bool ValidationImpl() override;
   bool PreProcessingImpl() override;
   bool RunImpl() override;
   bool PostProcessingImpl() override;
 
-  // Transfer data
-  void BcastSizes(size_t& original_size,size_t& padded_size);
-  void DistributeData(const size_t &padded_size, const std::vector<std::pair<double, double>>& padded_input, 
-                      std::vector<int>& counts, std::vector<int>& displs,
-                      std::vector<std::pair<double, double>>& local_pts) const;
+  // Processes parallelization
+  void BcastSizes(size_t &original_size, size_t &padded_size);
+  void DistributeData(const size_t &original_size, const size_t &padded_size,
+                      std::vector<std::pair<double, double>> &local_data);
   void BcastOutput();
+  void FindGlobalPivot(std::vector<std::pair<double, double>> &local_data, const std::pair<double, double> &local_pivot,
+                       std::pair<double, double> &global_pivot);
+  void GatherSortedBlocks(std::vector<std::pair<double, double>> &local_data, std::vector<int> &real_counts,
+                          std::vector<int> &real_displs, std::vector<std::pair<double, double>> &gathered);
 
   // Merge blocks
-  std::vector<std::pair<double, double>> MergeSortedBlocks(const std::vector<std::pair<double, double>>& gathered,
-    const std::vector<int>& counts, const std::vector<int>& displs, const std::pair<double, double>& pivot);
+  std::vector<std::pair<double, double>> MergeSortedBlocks(const std::vector<std::pair<double, double>> &gathered,
+                                                           const std::vector<int> &counts,
+                                                           const std::vector<int> &displs,
+                                                           const std::pair<double, double> &pivot);
   std::vector<std::pair<double, double>> MergeSortedBlocksParallel(
-      const std::vector<std::pair<double, double>>& gathered,
-      const std::vector<int>& counts,
-      const std::vector<int>& displs,
-      const std::pair<double, double>& pivot);
+      const std::vector<std::pair<double, double>> &gathered, const std::vector<int> &counts,
+      const std::vector<int> &displs, const std::pair<double, double> &pivot);
   std::vector<std::pair<double, double>> MergeBlocksRange(
-      const std::vector<std::vector<std::pair<double, double>>>& blocks,
-      int left,
-      int right,
-      const std::pair<double, double>& pivot);
-  std::vector<std::pair<double, double>> MergeTwoBlocks(
-      const std::vector<std::pair<double, double>>& left,
-      const std::vector<std::pair<double, double>>& right,
-      const std::pair<double, double>& pivot);
+      const std::vector<std::vector<std::pair<double, double>>> &blocks, int left, int right,
+      const std::pair<double, double> &pivot);
+  static std::vector<std::pair<double, double>> MergeTwoBlocks(const std::vector<std::pair<double, double>> &left,
+                                                               const std::vector<std::pair<double, double>> &right,
+                                                               const std::pair<double, double> &pivot);
 
-  // Threads parallelization 
-  static size_t FindPivotParallel(const std::vector<std::pair<double, double>> &pts);
+  // Threads parallelization
+  static void FindPivotParallel(const std::vector<std::pair<double, double>> &pts,
+                                std::pair<double, double> &local_pivot);
   static void ParallelSort(std::vector<std::pair<double, double>> &data, const std::pair<double, double> &pivot);
 
   // Sequential
@@ -64,7 +64,7 @@ class PerepelkinIConvexHullGrahamScanALL : public BaseTask {
                                const std::pair<double, double> &pivot);
 
   // Helpers
-  bool IsBetterPivot(const std::pair<double, double>& a, const std::pair<double, double>& b) const;
+  [[nodiscard]] static bool IsBetterPivot(const std::pair<double, double> &a, const std::pair<double, double> &b);
   static bool AngleCmp(const std::pair<double, double> &a, const std::pair<double, double> &b,
                        const std::pair<double, double> &pivot);
   static double Orientation(const std::pair<double, double> &p, const std::pair<double, double> &q,
